@@ -1,17 +1,19 @@
 import { Link } from 'react-router-dom'
-import { ConfirmButton, PageHeader } from '../components/ui'
+import { ConfirmButton, LangSwitch, PageHeader } from '../components/ui'
 import { resetAll, updateSettings, useData } from '../lib/store'
+import { useT } from '../lib/i18n'
 
 function Stepper({ value, min, max, onChange, label, unit }: { value: number; min: number; max: number; onChange: (v: number) => void; label: string; unit: string }) {
+  const t = useT()
   return (
     <div className="flex items-center gap-3">
-      <button type="button" className="btn-ghost h-11 w-11 min-h-0 px-0 text-xl" onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min} aria-label={`Diminuer : ${label}`}>
+      <button type="button" className="btn-ghost h-11 w-11 min-h-0 px-0 text-xl" onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min} aria-label={t.settings.decrease(label)}>
         −
       </button>
       <span className="min-w-20 text-center font-semibold" aria-live="polite">
         {value} {unit}
       </span>
-      <button type="button" className="btn-ghost h-11 w-11 min-h-0 px-0 text-xl" onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max} aria-label={`Augmenter : ${label}`}>
+      <button type="button" className="btn-ghost h-11 w-11 min-h-0 px-0 text-xl" onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max} aria-label={t.settings.increase(label)}>
         +
       </button>
     </div>
@@ -20,13 +22,19 @@ function Stepper({ value, min, max, onChange, label, unit }: { value: number; mi
 
 export default function Settings() {
   const { settings } = useData()
+  const t = useT()
   return (
     <div>
-      <PageHeader title="Réglages" back="/" />
+      <PageHeader title={t.settings.title} back="/" />
       <div className="grid gap-7">
         <div>
+          <p className="label">{t.common.language}</p>
+          <LangSwitch value={settings.lang} onChange={(l) => updateSettings({ lang: l })} />
+        </div>
+
+        <div>
           <label className="label" htmlFor="name">
-            Ton prénom
+            {t.settings.name}
           </label>
           <input
             id="name"
@@ -34,35 +42,33 @@ export default function Settings() {
             value={settings.displayName}
             maxLength={30}
             onChange={(e) => updateSettings({ displayName: e.target.value })}
-            placeholder="Pour la salutation de l’accueil"
+            placeholder={t.settings.namePh}
             autoComplete="given-name"
           />
         </div>
 
         <div>
-          <p className="label">Objectif de jours actifs par semaine</p>
-          <Stepper value={settings.weeklyGoalDays} min={1} max={7} unit={settings.weeklyGoalDays > 1 ? 'jours' : 'jour'} label="objectif hebdomadaire" onChange={(v) => updateSettings({ weeklyGoalDays: v })} />
+          <p className="label">{t.settings.weeklyGoal}</p>
+          <Stepper value={settings.weeklyGoalDays} min={1} max={7} unit={t.settings.days(settings.weeklyGoalDays)} label={t.settings.weeklyGoal} onChange={(v) => updateSettings({ weeklyGoalDays: v })} />
         </div>
 
         <div>
-          <p className="label">Repos d’une mission terminée</p>
-          <p className="-mt-1 mb-2 text-sm text-ink-soft">Une mission faite ne ressort pas au tirage pendant ce délai.</p>
-          <Stepper value={settings.cooldownDays} min={0} max={14} unit={settings.cooldownDays > 1 ? 'jours' : 'jour'} label="délai de repos" onChange={(v) => updateSettings({ cooldownDays: v })} />
+          <p className="label">{t.settings.cooldown}</p>
+          <p className="-mt-1 mb-2 text-sm text-ink-soft">{t.settings.cooldownHelp}</p>
+          <Stepper value={settings.cooldownDays} min={0} max={14} unit={t.settings.days(settings.cooldownDays)} label={t.settings.cooldown} onChange={(v) => updateSettings({ cooldownDays: v })} />
         </div>
 
         <Link to="/installer" className="flex min-h-14 items-center justify-between rounded-2xl border-2 border-line px-4 font-semibold">
-          Installer l’appli sur ton téléphone
+          {t.settings.install}
         </Link>
 
         <div className="rounded-2xl bg-paper-deep p-4 text-sm">
-          <p className="font-semibold">Où sont tes données ?</p>
-          <p className="mt-1 text-ink-soft">
-            Pour l’instant, uniquement sur cet appareil. La sauvegarde en ligne et la synchronisation entre appareils arrivent avec la création de compte.
-          </p>
+          <p className="font-semibold">{t.settings.whereData}</p>
+          <p className="mt-1 text-ink-soft">{t.settings.whereDataText}</p>
         </div>
 
         <div className="grid">
-          <ConfirmButton label="Tout réinitialiser" confirmLabel="Confirmer : effacer toutes mes données" onConfirm={resetAll} />
+          <ConfirmButton label={t.settings.reset} confirmLabel={t.settings.confirmReset} onConfirm={resetAll} />
         </div>
       </div>
     </div>

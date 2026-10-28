@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ConfirmButton, DifficultyDots, PageHeader, QUALITY_LABEL, WHEEL_META, formatDuration } from '../components/ui'
+import { ConfirmButton, DifficultyDots, PageHeader, WHEEL_META, formatDuration, runTitle } from '../components/ui'
+import { useT } from '../lib/i18n'
+import { missionText } from '../lib/demo'
 import { completeRun, skipRun, startRun, toggleStep, useData } from '../lib/store'
 import type { Difficulty } from '../lib/types'
 
@@ -17,6 +19,8 @@ function useMinutesSince(iso?: string) {
 export default function MissionRun() {
   const { runId } = useParams()
   const data = useData()
+  const t = useT()
+  const lang = data.settings.lang
   const navigate = useNavigate()
   const run = data.runs.find((r) => r.id === runId)
   const mission = run ? data.missions.find((m) => m.id === run.missionId) : undefined
@@ -30,23 +34,24 @@ export default function MissionRun() {
   if (!run) {
     return (
       <div>
-        <PageHeader title="Mission introuvable" back="/" />
-        <p className="text-ink-soft">Cette mission n’existe plus sur cet appareil.</p>
+        <PageHeader title={t.common.notFound} back="/" />
+        <p className="text-ink-soft">{t.run.gone}</p>
       </div>
     )
   }
 
   const meta = WHEEL_META[run.wheel]
-  const steps = mission?.steps ?? []
+  const text = mission ? missionText(mission, lang) : undefined
+  const steps = text?.steps ?? []
   const editable = run.status === 'accepted' || run.status === 'in_progress'
 
   return (
     <div>
-      <PageHeader title={run.missionTitle} back="/" />
+      <PageHeader title={runTitle(run, data, lang)} back="/" />
       <div className="-mt-2 mb-5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-soft">
         <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color: meta.deep }}>
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: meta.color }} />
-          {meta.short}
+          {t.wheels[run.wheel].short}
         </span>
         {mission && <span>{formatDuration(mission.durationMin)}</span>}
         {mission && <DifficultyDots value={mission.difficulty} />}
@@ -54,21 +59,21 @@ export default function MissionRun() {
 
       {!mission && (
         <p className="mb-4 rounded-xl bg-white p-4 text-sm text-ink-soft">
-          Le modèle de cette mission a été supprimé. L’historique reste disponible.
+          {t.run.templateDeleted}
         </p>
       )}
 
-      {mission && (
+      {mission && text && (
         <>
           <section>
-            <h2 className="text-lg font-bold">Objectif</h2>
-            <p className="mt-1 text-[15px] leading-relaxed">{mission.objective}</p>
+            <h2 className="text-lg font-bold">{t.common.objective}</h2>
+            <p className="mt-1 text-[15px] leading-relaxed">{text.objective}</p>
           </section>
 
           {steps.length > 0 && (
             <section className="mt-6">
               <h2 className="text-lg font-bold">
-                Étapes{' '}
+                {t.common.steps}{' '}
                 <span className="text-sm font-semibold text-ink-soft">
                   {run.stepsDone.length}/{steps.length}
                 </span>
@@ -98,8 +103,8 @@ export default function MissionRun() {
           )}
 
           <section className="mt-6 border-l-4 pl-3" style={{ borderColor: meta.color }}>
-            <h2 className="text-lg font-bold">Réussi si</h2>
-            <p className="mt-1 text-[15px]">{mission.successCriterion}</p>
+            <h2 className="text-lg font-bold">{t.common.successIf}</h2>
+            <p className="mt-1 text-[15px]">{text.successCriterion}</p>
           </section>
         </>
       )}
@@ -107,17 +112,17 @@ export default function MissionRun() {
       <div className="mt-8">
         {run.status === 'accepted' && (
           <button className="btn-sun w-full text-lg" onClick={() => startRun(run.id)}>
-            Commencer
+            {t.run.start}
           </button>
         )}
 
         {run.status === 'in_progress' && !finishing && (
           <>
             <p className="mb-3 text-center text-sm text-ink-soft">
-              Commencée il y a {elapsed < 1 ? 'moins d’une minute' : formatDuration(elapsed)}
+              {t.run.startedAgo(elapsed < 1 ? null : formatDuration(elapsed))}
             </p>
             <button className="btn-sun w-full text-lg" onClick={() => setFinishing(true)}>
-              J’ai terminé
+              {t.run.finished}
             </button>
           </>
         )}
@@ -131,20 +136,20 @@ export default function MissionRun() {
               completeRun(run.id, note, quality)
             }}
           >
-            <h2 className="text-xl font-bold">Ton résultat</h2>
+            <h2 className="text-xl font-bold">{t.run.result}</h2>
             <label className="label mt-4" htmlFor="note">
-              Qu’as-tu produit ? <span className="font-normal text-ink-soft">(+5 points si tu le notes)</span>
+              {t.run.whatProduced} <span className="font-normal text-ink-soft">{t.run.noteBonus}</span>
             </label>
             <textarea
               id="note"
               className="field min-h-24"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Ex. : 10 mots notés dans mon carnet, landing page en ligne…"
+              placeholder={t.run.notePlaceholder}
               maxLength={1000}
             />
             <fieldset className="mt-4">
-              <legend className="label">Ce que tu en penses</legend>
+              <legend className="label">{t.run.selfReview}</legend>
               <div className="grid grid-cols-3 gap-2">
                 {([1, 2, 3] as Difficulty[]).map((q) => (
                   <button
@@ -157,46 +162,46 @@ export default function MissionRun() {
                       setQualityError(false)
                     }}
                   >
-                    {QUALITY_LABEL[q]}
+                    {t.common.quality[q]}
                   </button>
                 ))}
               </div>
-              {qualityError && <p className="mt-2 text-sm text-danger">Choisis une évaluation pour valider.</p>}
+              {qualityError && <p className="mt-2 text-sm text-danger">{t.run.pickQuality}</p>}
             </fieldset>
             <button type="submit" className="btn-primary mt-5 w-full">
-              Valider la mission
+              {t.run.validate}
             </button>
             <button type="button" className="btn mt-1 w-full text-ink-soft" onClick={() => setFinishing(false)}>
-              Pas encore fini
+              {t.run.notYet}
             </button>
           </form>
         )}
 
         {run.status === 'done' && (
           <section className="rounded-3xl border-[3px] border-ink bg-sun p-5">
-            <p className="font-display text-4xl font-bold">+{run.xp} points</p>
+            <p className="font-display text-4xl font-bold">{t.run.points(run.xp ?? 0)}</p>
             <p className="mt-1 font-semibold">
-              Mission terminée{run.quality ? `, résultat ${QUALITY_LABEL[run.quality].toLowerCase()}` : ''}
+              {t.run.done(run.quality ? t.common.quality[run.quality] : null)}
             </p>
             {run.resultNote && <p className="mt-3 rounded-xl bg-white/70 p-3 text-[15px]">{run.resultNote}</p>}
             <div className="mt-4 grid gap-2">
               <Link to={`/roues${run.wheel === 'hustle' ? '?w=hustle' : ''}`} className="btn-primary">
-                Retour aux roues
+                {t.run.backToWheels}
               </Link>
               <Link to="/progression" className="btn border-2 border-ink">
-                Voir ma progression
+                {t.run.seeProgress}
               </Link>
             </div>
           </section>
         )}
 
-        {run.status === 'skipped' && <p className="text-center text-ink-soft">Mission mise de côté. Aucune pénalité.</p>}
+        {run.status === 'skipped' && <p className="text-center text-ink-soft">{t.run.skipped}</p>}
 
         {editable && (
           <div className="mt-3 grid">
             <ConfirmButton
-              label="Abandonner cette mission"
-              confirmLabel="Confirmer l’abandon (sans pénalité)"
+              label={t.run.abandon}
+              confirmLabel={t.run.confirmAbandon}
               className="btn text-ink-soft"
               onConfirm={() => {
                 skipRun(run.id)

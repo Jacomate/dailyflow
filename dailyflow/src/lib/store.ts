@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import type { AppData, Difficulty, Mission, Run, Settings, WheelKind } from './types'
 import { demoMissions } from './demo'
+import { detectLang } from './lang'
 import { randomInt, uid } from './random'
 import { xpFor } from './progress'
 
@@ -9,14 +10,18 @@ import { xpFor } from './progress'
 
 const KEY = 'dailyflow:v1'
 
-const defaultSettings: Settings = {
+function defaultSettings(): Settings {
+  return {
+  lang: detectLang(),
   displayName: '',
   weeklyGoalDays: 4,
   cooldownDays: 2,
+  }
 }
 
-function fresh(): AppData {
-  return { version: 1, missions: demoMissions(), runs: [], settings: { ...defaultSettings } }
+function fresh(keep?: Partial<Settings>): AppData {
+  const settings = { ...defaultSettings(), ...keep }
+  return { version: 1, missions: demoMissions(settings.lang), runs: [], settings }
 }
 
 let storageOk = true
@@ -27,7 +32,7 @@ function load(): AppData {
     if (!raw) return fresh()
     const parsed = JSON.parse(raw) as AppData
     if (parsed?.version !== 1 || !Array.isArray(parsed.missions)) return fresh()
-    return { ...parsed, settings: { ...defaultSettings, ...parsed.settings } }
+    return { ...parsed, settings: { ...defaultSettings(), ...parsed.settings } }
   } catch {
     storageOk = false
     return fresh()
@@ -65,13 +70,16 @@ export function isStoragePersistent() {
 
 export type MissionInput = Omit<Mission, 'id' | 'createdAt' | 'demo' | 'active'> & { active?: boolean }
 
-export function validateMission(m: Partial<MissionInput>): Record<string, string> {
-  const errors: Record<string, string> = {}
-  if (!m.title?.trim()) errors.title = 'Donne un titre à la mission.'
-  else if (m.title.trim().length > 80) errors.title = '80 caractères maximum.'
-  if (!m.objective?.trim()) errors.objective = 'Décris ce que tu vas produire.'
-  if (!m.successCriterion?.trim()) errors.successCriterion = 'Précise comment savoir que c’est réussi.'
-  if (!m.durationMin || m.durationMin < 5 || m.durationMin > 480) errors.durationMin = 'Entre 5 et 480 minutes.'
+export type FieldError = 'title' | 'titleLong' | 'objective' | 'criterion' | 'duration'
+
+/** Renvoie, pour chaque champ invalide, le code de l'erreur à afficher. */
+export function validateMission(m: Partial<MissionInput>): Record<string, FieldError> {
+  const errors: Record<string, FieldError> = {}
+  if (!m.title?.trim()) errors.title = 'title'
+  else if (m.title.trim().length > 80) errors.title = 'titleLong'
+  if (!m.objective?.trim()) errors.objective = 'objective'
+  if (!m.successCriterion?.trim()) errors.successCriterion = 'criterion'
+  if (!m.durationMin || m.durationMin < 5 || m.durationMin > 480) errors.durationMin = 'duration'
   return errors
 }
 
@@ -137,18 +145,14 @@ export function eligibleMissions(data: AppData, wheel: WheelKind, maxDuration?: 
   return rested.length > 0 ? rested : base
 }
 
-export type DrawResult = { ok: true; run: Run } | { ok: false; reason: string }
+export type DrawError = 'openRun' | 'noneForDuration' | 'noneActive' | 'cannotReroll' | 'alreadyRerolled' | 'noOther'
+export type DrawResult = { ok: true; run: Run } | { ok: false; reason: DrawError }
 
 export function draw(wheel: WheelKind, maxDuration?: number): DrawResult {
-  if (openRun(state, wheel)) return { ok: false, reason: 'Termine ou abandonne la mission en cours avant de relancer.' }
+  if (openRun(state, wheel)) return { ok: false, reason: 'openRun' }
   const pool = eligibleMissions(state, wheel, maxDuration)
   if (pool.length === 0) {
-    return {
-      ok: false,
-      reason: maxDuration
-        ? `Aucune mission active de ${maxDuration} min ou moins dans cette roue.`
-        : 'Aucune mission active dans cette roue. Ajoutes-en une.',
-    }
+    return { ok: false, reason: maxDuration ? 'noneForDuration' : 'noneActive' }
   }
   const mission = pool[randomInt(pool.length)]
   const run: Run = {
@@ -168,10 +172,10 @@ export function draw(wheel: WheelKind, maxDuration?: number): DrawResult {
 /** Une seule relance par tirage, pour éviter l'effet machine à sous. */
 export function reroll(runId: string, maxDuration?: number): DrawResult {
   const run = state.runs.find((r) => r.id === runId)
-  if (!run || run.status !== 'drawn') return { ok: false, reason: 'Ce tirage ne peut plus être relancé.' }
-  if (run.rerollUsed) return { ok: false, reason: 'Tu as déjà utilisé ta relance.' }
+  if (!run || run.status !== 'drawn') return { ok: false, reason: 'cannotReroll' }
+  if (run.rerollUsed) return { ok: false, reason: 'alreadyRerolled' }
   const pool = eligibleMissions(state, run.wheel, maxDuration).filter((m) => m.id !== run.missionId)
-  if (pool.length === 0) return { ok: false, reason: 'Aucune autre mission disponible pour une relance.' }
+  if (pool.length === 0) return { ok: false, reason: 'noOther' }
   const mission = pool[randomInt(pool.length)]
   const next: Run = { ...run, missionId: mission.id, missionTitle: mission.title, rerollUsed: true, drawnAt: new Date().toISOString() }
   commit({ ...state, runs: state.runs.map((r) => (r.id === runId ? next : r)) })
@@ -222,5 +226,6 @@ export function updateSettings(patch: Partial<Settings>) {
 }
 
 export function resetAll() {
-  commit(fresh())
+  // On garde la langue choisie.
+  commit(fresh({ lang: state.settings.lang }))
 }

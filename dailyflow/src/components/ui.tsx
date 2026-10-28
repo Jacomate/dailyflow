@@ -1,26 +1,27 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import type { Difficulty, WheelKind } from '../lib/types'
+import type { AppData, Difficulty, Lang, Run, WheelKind } from '../lib/types'
+import { useT } from '../lib/i18n'
+import { demoText } from '../lib/demo'
 
-export const WHEEL_META: Record<WheelKind, { name: string; short: string; color: string; deep: string; palette: string[] }> = {
+export const WHEEL_META: Record<WheelKind, { color: string; deep: string; palette: string[] }> = {
   envies: {
-    name: 'Envies et objectifs',
-    short: 'Envies',
     color: 'var(--color-envies)',
     deep: 'var(--color-envies-deep)',
     palette: ['#E0457B', '#A82D5A', '#C93A6C', '#8A2149'],
   },
   hustle: {
-    name: 'Side hustles',
-    short: 'Side hustles',
     color: 'var(--color-hustle)',
     deep: 'var(--color-hustle-deep)',
     palette: ['#14906F', '#0E6E55', '#1A7F64', '#0B5A46'],
   },
 }
 
-export const DIFFICULTY_LABEL: Record<Difficulty, string> = { 1: 'Facile', 2: 'Moyen', 3: 'Exigeant' }
-export const QUALITY_LABEL: Record<Difficulty, string> = { 1: 'Brouillon', 2: 'Correct', 3: 'Solide' }
+/** Titre d'une mission tirée : traduit si c'est un exemple non modifié. */
+export function runTitle(run: Run, data: AppData, lang: Lang): string {
+  const m = data.missions.find((x) => x.id === run.missionId)
+  return (m?.demo && demoText(m.id, lang)?.title) || run.missionTitle
+}
 
 export function formatDuration(min: number) {
   if (min < 60) return `${min} min`
@@ -30,23 +31,25 @@ export function formatDuration(min: number) {
 }
 
 export function DifficultyDots({ value }: { value: Difficulty }) {
+  const t = useT()
   return (
-    <span className="inline-flex items-center gap-1.5" title={`Difficulté : ${DIFFICULTY_LABEL[value]}`}>
+    <span className="inline-flex items-center gap-1.5" title={t.common.difficultyTitle(t.common.difficulty[value])}>
       <span className="inline-flex gap-0.5" aria-hidden="true">
         {[1, 2, 3].map((i) => (
           <span key={i} className={`h-2 w-2 rounded-full ${i <= value ? 'bg-ink' : 'bg-line'}`} />
         ))}
       </span>
-      <span>{DIFFICULTY_LABEL[value]}</span>
+      <span>{t.common.difficulty[value]}</span>
     </span>
   )
 }
 
 export function PageHeader({ title, back, right }: { title: string; back?: string; right?: ReactNode }) {
+  const t = useT()
   return (
     <header className="flex items-center gap-3 pb-4 pt-2">
       {back && (
-        <Link to={back} className="-ml-2 grid h-11 w-11 place-items-center rounded-full text-ink hover:bg-paper-deep" aria-label="Retour">
+        <Link to={back} className="-ml-2 grid h-11 w-11 place-items-center rounded-full text-ink hover:bg-paper-deep" aria-label={t.common.back}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
@@ -101,5 +104,34 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
         className={`absolute top-0.5 h-5.5 w-5.5 rounded-full transition-all ${checked ? 'left-[22px] bg-sun' : 'left-0.5 bg-line'}`}
       />
     </button>
+  )
+}
+
+/** Sélecteur de langue en trois segments. */
+export function LangSwitch({ value, onChange, compact = false }: { value: Lang; onChange: (l: Lang) => void; compact?: boolean }) {
+  const t = useT()
+  const langs: { code: Lang; short: string; name: string }[] = [
+    { code: 'fr', short: 'FR', name: 'Français' },
+    { code: 'en', short: 'EN', name: 'English' },
+    { code: 'es', short: 'ES', name: 'Español' },
+  ]
+  return (
+    <div className={`inline-grid grid-cols-3 gap-1 rounded-full bg-paper-deep p-1 ${compact ? '' : 'w-full'}`} role="group" aria-label={t.common.language}>
+      {langs.map((l) => (
+        <button
+          key={l.code}
+          type="button"
+          lang={l.code}
+          aria-pressed={value === l.code}
+          aria-label={l.name}
+          onClick={() => onChange(l.code)}
+          className={`rounded-full font-semibold transition-colors ${compact ? 'min-h-9 px-3 text-xs' : 'min-h-11 px-3 text-sm'} ${
+            value === l.code ? 'bg-ink text-paper' : 'text-ink-soft'
+          }`}
+        >
+          {compact ? l.short : l.name}
+        </button>
+      ))}
+    </div>
   )
 }

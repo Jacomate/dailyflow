@@ -3,6 +3,8 @@
 
 export type WheelKind = 'envies' | 'hustle'
 
+export type Lang = 'fr' | 'en' | 'es'
+
 export type Difficulty = 1 | 2 | 3
 
 /** Un modèle de mission, rangé dans une roue. */
@@ -45,6 +47,7 @@ export interface Run {
 }
 
 export interface Settings {
+  lang: Lang
   displayName: string
   /** Nombre de jours actifs visés par semaine. */
   weeklyGoalDays: number

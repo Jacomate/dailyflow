@@ -1,4 +1,5 @@
 import { PageHeader } from '../components/ui'
+import { useT } from '../lib/i18n'
 
 function detect() {
   const ua = navigator.userAgent
@@ -10,11 +11,12 @@ function detect() {
 }
 
 function Steps({ title, steps, highlight }: { title: string; steps: string[]; highlight: boolean }) {
+  const t = useT()
   return (
     <section className={`rounded-3xl border-2 p-5 ${highlight ? 'border-ink bg-white' : 'border-line'}`}>
       <h2 className="text-xl font-bold">
         {title}
-        {highlight && <span className="ml-2 align-middle text-sm font-semibold text-ink-soft">ton appareil</span>}
+        {highlight && <span className="ml-2 align-middle text-sm font-semibold text-ink-soft">{t.install.yourDevice}</span>}
       </h2>
       <ol className="mt-3 grid gap-2">
         {steps.map((s, i) => (
@@ -30,36 +32,25 @@ function Steps({ title, steps, highlight }: { title: string; steps: string[]; hi
 
 export default function Install() {
   const { ios, android, standalone } = detect()
+  const t = useT()
   return (
     <div>
-      <PageHeader title="Installer DailyFlow" back="/reglages" />
+      <PageHeader title={t.install.title} back="/reglages" />
       {standalone ? (
-        <p className="rounded-xl bg-sun px-4 py-3 font-semibold">C’est fait : tu utilises déjà l’appli installée.</p>
+        <p className="rounded-xl bg-sun px-4 py-3 font-semibold">{t.install.already}</p>
       ) : (
-        <p className="text-[15px] text-ink-soft">
-          DailyFlow s’installe depuis le navigateur, sans passer par l’App Store ni Google Play. L’icône apparaît ensuite sur ton écran d’accueil.
-        </p>
+        <p className="text-[15px] text-ink-soft">{t.install.intro}</p>
       )}
       <div className="mt-5 grid gap-4">
         <Steps
           title="iPhone"
           highlight={ios}
-          steps={[
-            'Ouvre ce lien dans Safari.',
-            'Touche le bouton Partager (le carré avec une flèche vers le haut).',
-            'Choisis « Sur l’écran d’accueil ».',
-            'Touche « Ajouter ».',
-          ]}
+          steps={t.install.ios}
         />
         <Steps
           title="Android"
           highlight={android}
-          steps={[
-            'Ouvre ce lien dans Chrome.',
-            'Touche le menu ⋮ en haut à droite.',
-            'Choisis « Installer l’application » ou « Ajouter à l’écran d’accueil ».',
-            'Confirme.',
-          ]}
+          steps={t.install.android}
         />
       </div>
     </div>
