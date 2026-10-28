@@ -1,0 +1,77 @@
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/figtree';
+@import 'tailwindcss';
+
+@theme {
+  --color-paper: #f2f0f9;
+  --color-paper-deep: #e6e2f3;
+  --color-ink: #1e1b3a;
+  --color-ink-soft: #6b6789;
+  --color-line: #d3cee6;
+  --color-envies: #e0457b;
+  --color-envies-deep: #a82d5a;
+  --color-hustle: #14906f;
+  --color-hustle-deep: #0b5a46;
+  --color-sun: #ffc83d;
+  --color-danger: #c42b2b;
+
+  --font-display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --font-body: 'Figtree Variable', system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    background: var(--color-paper);
+  }
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    color: var(--color-ink);
+    background: var(--color-paper);
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-ink);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+@utility btn {
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-5 text-[15px] font-semibold transition-transform active:scale-[0.98] disabled:opacity-45 disabled:active:scale-100;
+}
+@utility btn-primary {
+  @apply btn bg-ink text-paper;
+}
+@utility btn-sun {
+  @apply btn border-[3px] border-ink bg-sun text-ink shadow-[0_4px_0_var(--color-ink)] active:translate-y-[3px] active:shadow-[0_1px_0_var(--color-ink)];
+}
+@utility btn-ghost {
+  @apply btn border-2 border-line bg-transparent text-ink;
+}
+@utility chip {
+  @apply inline-flex min-h-10 items-center rounded-full border-2 border-line px-4 text-sm font-semibold text-ink-soft disabled:opacity-45;
+  &[aria-pressed='true'] {
+    @apply border-ink bg-ink text-paper;
+  }
+}
+@utility field {
+  @apply w-full rounded-xl border-2 border-line bg-white px-3.5 py-3 text-base text-ink placeholder:text-ink-soft/70 focus:border-ink focus:outline-none;
+}
+@utility label {
+  @apply mb-1.5 block text-sm font-semibold text-ink;
+}
